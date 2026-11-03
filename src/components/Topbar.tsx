@@ -54,7 +54,7 @@ export default function Topbar() {
             <span className="text-muted-foreground">loading…</span>
           ) : (
             <select
-              className="rounded-md border border-border bg-surface px-2 py-1.5 text-foreground"
+              className="w-48 truncate rounded-md border border-border bg-surface px-2 py-1.5 text-foreground sm:w-56"
               value={actingUserId ?? ""}
               onChange={(e) => setActingUserId(e.target.value)}
             >
