@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useActingUser } from "./ActingUserContext";
 import ThemeToggle from "./ThemeToggle";
 import { isAdminOrHr } from "@/lib/roles";
+import { ChevronDown } from "lucide-react";
 
 const LINKS = [
   { href: "/", label: "Overview", adminOnly: false },
@@ -53,21 +54,28 @@ export default function Topbar() {
           {loading ? (
             <span className="text-muted-foreground">loading…</span>
           ) : (
-            <select
-              className="w-48 truncate rounded-md border border-border bg-surface px-2 py-1.5 text-foreground sm:w-56"
-              value={actingUserId ?? ""}
-              onChange={(e) => setActingUserId(e.target.value)}
-            >
-              {employeesByRole.map((group) => (
-                <optgroup key={group.role} label={ROLE_GROUP_LABEL[group.role] ?? group.role}>
-                  {group.members.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} ({e.department})
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <div className="relative w-48 flex-shrink-0 sm:w-56">
+              <select
+                className="w-full appearance-none truncate rounded-md border border-border bg-surface py-1.5 pl-2 pr-7 text-foreground"
+                value={actingUserId ?? ""}
+                onChange={(e) => setActingUserId(e.target.value)}
+              >
+                {employeesByRole.map((group) => (
+                  <optgroup key={group.role} label={ROLE_GROUP_LABEL[group.role] ?? group.role}>
+                    {group.members.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name} ({e.department})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <ChevronDown
+                size={14}
+                strokeWidth={2.5}
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+            </div>
           )}
           {actingUser && (
             <>
