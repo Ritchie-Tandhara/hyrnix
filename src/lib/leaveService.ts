@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { evaluateLeaveRequest } from "./decision";
 import { toEmployeeLite, toLeaveRequestLite } from "./mappers";
-import { resolvePublishedPolicyForEmployee } from "./policyService";
+import { resolvePublishedPolicyForEmployee, resolvePublishedPolicyForEmployeeAndKey } from "./policyService";
 import { daysBetweenInclusive } from "./balance";
 import { recordAuditLog } from "./auditLog";
 import { isAdminOrHr } from "./roles";
@@ -35,6 +35,8 @@ export async function submitLeaveRequest(input: {
   startDate: Date;
   endDate: Date;
   daysRequested?: number;
+  halfDay?: boolean;
+  policyKey?: string; // which leave type (Annual, Sick, Casual, ...); omit to fall back to the single best-match policy
   actorId?: string; // defaults to the employee themself
 }) {
   const employeeRow = await prisma.employee.findUniqueOrThrow({ where: { id: input.employeeId } });
@@ -47,15 +49,22 @@ export async function submitLeaveRequest(input: {
     }
   }
 
-  const policy = await resolvePublishedPolicyForEmployee(input.employeeId, input.startDate);
+  if (input.halfDay && input.startDate.getTime() !== input.endDate.getTime()) {
+    throw new Error("Half-day requests must have the same start and end date.");
+  }
+
+  const policy = input.policyKey
+    ? await resolvePublishedPolicyForEmployeeAndKey(input.employeeId, input.startDate, input.policyKey)
+    : await resolvePublishedPolicyForEmployee(input.employeeId, input.startDate);
 
   if (!policy) {
     throw new Error(
-      `No published leave policy covers ${employeeRow.name} (department: ${employeeRow.department}) as of ${input.startDate.toISOString().slice(0, 10)}.`
+      `No published${input.policyKey ? ` "${input.policyKey}"` : ""} leave policy covers ${employeeRow.name} (department: ${employeeRow.department}) as of ${input.startDate.toISOString().slice(0, 10)}.`
     );
   }
 
-  const daysRequested = input.daysRequested ?? daysBetweenInclusive(input.startDate, input.endDate);
+  const daysRequested =
+    input.daysRequested ?? (input.halfDay ? 0.5 : daysBetweenInclusive(input.startDate, input.endDate));
 
   const existingRequestRows = await prisma.leaveRequest.findMany({ where: { employeeId: input.employeeId } });
 
@@ -76,6 +85,7 @@ export async function submitLeaveRequest(input: {
       startDate: input.startDate,
       endDate: input.endDate,
       daysRequested,
+      halfDay: input.halfDay ?? false,
       status: trace.outcome,
       policyVersionId: policy.id,
       decisionReasoning: trace.reasoning,

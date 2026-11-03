@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import StatusBadge from "@/components/StatusBadge";
 import { getActingEmployee } from "@/lib/actingUserServer";
 import { isAdminOrHr } from "@/lib/roles";
-import { resolvePublishedPolicyForEmployee } from "@/lib/policyService";
+import { listAvailableLeaveTypesForEmployee } from "@/lib/policyService";
 import { calculateBalance } from "@/lib/balance";
 import { toEmployeeLite, toLeaveRequestLite } from "@/lib/mappers";
 import type { Employee } from "@prisma/client";
@@ -51,33 +51,31 @@ async function getStats() {
 
 async function getMyOverview(employeeRow: Employee) {
   const asOfDate = new Date();
-  const [policyRow, myRequestRows] = await Promise.all([
-    resolvePublishedPolicyForEmployee(employeeRow.id, asOfDate),
+  const [leaveTypePolicies, myRequestRows, allMyRequestRows] = await Promise.all([
+    listAvailableLeaveTypesForEmployee(employeeRow.id, asOfDate),
     prisma.leaveRequest.findMany({
       where: { employeeId: employeeRow.id },
       orderBy: { createdAt: "desc" },
       take: 5,
       include: { policyVersion: true },
     }),
+    prisma.leaveRequest.findMany({ where: { employeeId: employeeRow.id } }),
   ]);
 
-  let balance = null;
-  if (policyRow) {
-    const allMyRequestRows = await prisma.leaveRequest.findMany({ where: { employeeId: employeeRow.id } });
-    balance = calculateBalance(
-      toEmployeeLite(employeeRow),
-      policyRow,
-      allMyRequestRows.map(toLeaveRequestLite),
-      asOfDate
-    );
-  }
+  const employee = toEmployeeLite(employeeRow);
+  const leaveRequests = allMyRequestRows.map(toLeaveRequestLite);
+
+  const leaveTypes = leaveTypePolicies.map((policy) => ({
+    policy,
+    balance: calculateBalance(employee, policy, leaveRequests, asOfDate),
+  }));
 
   const [pendingCount, approvedCount] = await Promise.all([
     prisma.leaveRequest.count({ where: { employeeId: employeeRow.id, status: "PENDING" } }),
     prisma.leaveRequest.count({ where: { employeeId: employeeRow.id, status: "APPROVED" } }),
   ]);
 
-  return { policy: policyRow, balance, myRequests: myRequestRows, pendingCount, approvedCount };
+  return { leaveTypes, myRequests: myRequestRows, pendingCount, approvedCount };
 }
 
 type Accent = "primary" | "accent" | "success" | "warning" | "danger";
@@ -136,11 +134,12 @@ export default async function OverviewPage() {
   // everyone's recent requests), which aren't theirs to see.
   if (actingEmployee && !isAdminOrHr(actingEmployee.role)) {
     const my = await getMyOverview(actingEmployee);
+    const totalRemaining = my.leaveTypes.reduce((sum, t) => sum + t.balance.remainingDays, 0);
 
     const myCards: Array<{ label: string; value: string; href: string; icon: LucideIcon; accent: Accent }> = [
       {
-        label: "Remaining balance",
-        value: my.balance ? `${my.balance.remainingDays}d` : "—",
+        label: "Total leave remaining",
+        value: my.leaveTypes.length > 0 ? `${totalRemaining}d` : "—",
         href: "/process-xray",
         icon: Wallet,
         accent: "primary",
@@ -177,17 +176,21 @@ export default async function OverviewPage() {
           ))}
         </div>
 
-        {my.policy && my.balance && (
-          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-medium text-foreground">
-              <CalendarCheck2 size={18} className="text-primary" /> {my.policy.name} v{my.policy.version}
-            </h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Field label="Entitlement" value={`${my.balance.entitlementDays}d`} />
-              <Field label="Accrued so far" value={`${my.balance.accruedDays}d`} />
-              <Field label="Used" value={`${my.balance.usedDays}d`} />
-              <Field label="Remaining" value={`${my.balance.remainingDays}d`} />
-            </div>
+        {my.leaveTypes.length > 0 && (
+          <div className="space-y-4">
+            {my.leaveTypes.map(({ policy, balance }) => (
+              <div key={policy.id} className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-medium text-foreground">
+                  <CalendarCheck2 size={18} className="text-primary" /> {policy.name} v{policy.version}
+                </h2>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <Field label="Entitlement" value={`${balance.entitlementDays}d`} />
+                  <Field label="Accrued so far" value={`${balance.accruedDays}d`} />
+                  <Field label="Used" value={`${balance.usedDays}d`} />
+                  <Field label="Remaining" value={`${balance.remainingDays}d`} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -212,7 +215,10 @@ export default async function OverviewPage() {
                       <td className="py-3 pr-4 text-muted-foreground">
                         {r.startDate.toISOString().slice(0, 10)} → {r.endDate.toISOString().slice(0, 10)}
                       </td>
-                      <td className="py-3 pr-4">{r.daysRequested}</td>
+                      <td className="py-3 pr-4">
+                        {r.daysRequested}
+                        {r.halfDay && <span className="ml-1 text-xs text-muted-foreground">(half day)</span>}
+                      </td>
                       <td className="py-3 pr-4 text-muted-foreground">
                         {r.policyVersion.name} v{r.policyVersion.version}
                       </td>
@@ -292,7 +298,10 @@ export default async function OverviewPage() {
                     <td className="py-3 pr-4 text-muted-foreground">
                       {r.startDate.toISOString().slice(0, 10)} → {r.endDate.toISOString().slice(0, 10)}
                     </td>
-                    <td className="py-3 pr-4">{r.daysRequested}</td>
+                    <td className="py-3 pr-4">
+                      {r.daysRequested}
+                      {r.halfDay && <span className="ml-1 text-xs text-muted-foreground">(half day)</span>}
+                    </td>
                     <td className="py-3 pr-4 text-muted-foreground">
                       {r.policyVersion.name} v{r.policyVersion.version}
                     </td>

@@ -130,25 +130,73 @@ async function main() {
 
   console.log(`Created published policy: ${policyV1.name} v${policyV1.version} (${policyV1.entitlementDays} days).`);
 
-  // --- Seed a couple of leave requests evaluated under policy v1, with full traces ---
-  const sampleEmployees = employees.filter((e) => e.id !== ceo.id && e.id !== hrLead.id).slice(0, 2);
+  // --- Two more independent leave types, each its own entitlement pool ---
+  const sickLeave = await prisma.leavePolicy.create({
+    data: {
+      policyKey: "sick-leave",
+      name: "Sick Leave",
+      version: 1,
+      description: "Company-wide sick leave entitlement, separate from annual leave.",
+      entitlementDays: 10,
+      eligibleGroup: "all",
+      accrualRule: "ANNUAL_UPFRONT",
+      carryForwardDays: 0,
+      effectiveDate: new Date("2023-01-01"),
+      status: "PUBLISHED",
+      createdById: hrLead.id,
+      approvedById: ceo.id,
+    },
+  });
 
-  const policyLite = {
-    id: policyV1.id,
-    policyKey: policyV1.policyKey,
-    name: policyV1.name,
-    version: policyV1.version,
-    entitlementDays: policyV1.entitlementDays,
-    eligibleGroup: policyV1.eligibleGroup,
-    accrualRule: policyV1.accrualRule as "ANNUAL_UPFRONT" | "MONTHLY_ACCRUAL",
-    carryForwardDays: policyV1.carryForwardDays,
-    effectiveDate: policyV1.effectiveDate,
-    status: policyV1.status as "PUBLISHED",
-  };
+  const casualLeave = await prisma.leavePolicy.create({
+    data: {
+      policyKey: "casual-leave",
+      name: "Casual Leave",
+      version: 1,
+      description: "Short-notice casual leave entitlement, separate from annual leave.",
+      entitlementDays: 6,
+      eligibleGroup: "all",
+      accrualRule: "ANNUAL_UPFRONT",
+      carryForwardDays: 0,
+      effectiveDate: new Date("2023-01-01"),
+      status: "PUBLISHED",
+      createdById: hrLead.id,
+      approvedById: ceo.id,
+    },
+  });
 
-  async function seedLeaveRequest(employeeId: string, start: Date, end: Date, days: number) {
+  console.log(`Created published policy: ${sickLeave.name} v${sickLeave.version} (${sickLeave.entitlementDays} days).`);
+  console.log(`Created published policy: ${casualLeave.name} v${casualLeave.version} (${casualLeave.entitlementDays} days).`);
+
+  // --- Seed a few leave requests across different types, with full traces ---
+  const sampleEmployees = employees.filter((e) => e.id !== ceo.id && e.id !== hrLead.id).slice(0, 3);
+
+  function toPolicyLite(row: typeof policyV1) {
+    return {
+      id: row.id,
+      policyKey: row.policyKey,
+      name: row.name,
+      version: row.version,
+      entitlementDays: row.entitlementDays,
+      eligibleGroup: row.eligibleGroup,
+      accrualRule: row.accrualRule as "ANNUAL_UPFRONT" | "MONTHLY_ACCRUAL",
+      carryForwardDays: row.carryForwardDays,
+      effectiveDate: row.effectiveDate,
+      status: row.status as "PUBLISHED",
+    };
+  }
+
+  async function seedLeaveRequest(
+    employeeId: string,
+    policy: typeof policyV1,
+    start: Date,
+    end: Date,
+    days: number,
+    halfDay = false
+  ) {
     const employeeRow = await prisma.employee.findUniqueOrThrow({ where: { id: employeeId } });
     const existing = await prisma.leaveRequest.findMany({ where: { employeeId } });
+    const policyLite = toPolicyLite(policy);
 
     const trace = evaluateLeaveRequest({
       employee: { id: employeeRow.id, name: employeeRow.name, department: employeeRow.department, hireDate: employeeRow.hireDate },
@@ -173,8 +221,9 @@ async function main() {
         startDate: start,
         endDate: end,
         daysRequested: days,
+        halfDay,
         status: trace.outcome,
-        policyVersionId: policyV1.id,
+        policyVersionId: policy.id,
         decisionReasoning: trace.reasoning,
         decidedById: hrLead.id,
         decidedAt: new Date(),
@@ -199,22 +248,25 @@ async function main() {
         entityId: leaveRequest.id,
         action: "EVALUATED",
         actorId: hrLead.id,
-        details: JSON.stringify({ outcome: trace.outcome, policyVersionId: policyV1.id }),
+        details: JSON.stringify({ outcome: trace.outcome, policyVersionId: policy.id }),
       },
     });
 
     return leaveRequest;
   }
 
-  if (sampleEmployees.length >= 2) {
+  if (sampleEmployees.length >= 3) {
     const approvedDays = daysBetweenInclusive(new Date("2024-02-01"), new Date("2024-02-03"));
-    await seedLeaveRequest(sampleEmployees[0].id, new Date("2024-02-01"), new Date("2024-02-03"), approvedDays);
+    await seedLeaveRequest(sampleEmployees[0].id, policyV1, new Date("2024-02-01"), new Date("2024-02-03"), approvedDays);
 
     // Request for more days than the policy allows -> rejected trace.
-    await seedLeaveRequest(sampleEmployees[1].id, new Date("2024-03-01"), new Date("2024-03-25"), 25);
+    await seedLeaveRequest(sampleEmployees[1].id, policyV1, new Date("2024-03-01"), new Date("2024-03-25"), 25);
+
+    // A half-day sick leave request, same start/end date, 0.5 days.
+    await seedLeaveRequest(sampleEmployees[2].id, sickLeave, new Date("2024-04-10"), new Date("2024-04-10"), 0.5, true);
   }
 
-  console.log("Seeded 2 sample leave requests (one approved, one rejected) with Process X-Ray traces.");
+  console.log("Seeded 3 sample leave requests (annual approved, annual rejected, half-day sick) with Process X-Ray traces.");
   console.log("Seed complete. Use Policy Lab in the app to propose/simulate/publish a new policy version,");
   console.log("then submit a new leave request to see Process X-Ray reference the new version.");
 }

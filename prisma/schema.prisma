@@ -77,6 +77,7 @@ model LeaveRequest {
   startDate      DateTime
   endDate        DateTime
   daysRequested  Float
+  halfDay        Boolean  @default(false) // only meaningful when startDate == endDate
   status         String   @default("PENDING")
 
   policyVersionId String

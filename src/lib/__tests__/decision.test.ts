@@ -69,6 +69,21 @@ describe("evaluateLeaveRequest", () => {
     expect(trace.reasoning).toContain("insufficient balance");
   });
 
+  it("approves a 0.5-day (half-day) request and deducts exactly half a day", () => {
+    const trace = evaluateLeaveRequest({
+      employee,
+      policy,
+      requestStartDate: new Date("2024-06-01"),
+      requestEndDate: new Date("2024-06-01"),
+      daysRequested: 0.5,
+      existingLeaveRequests: [],
+    });
+
+    expect(trace.outcome).toBe("APPROVED");
+    expect(trace.inputs).toMatchObject({ daysRequested: 0.5 });
+    expect(trace.reasoning).toContain("0.5-day request");
+  });
+
   it("rejects on ineligibility before even checking balance semantics", () => {
     const salesOnlyPolicy: PolicyLite = { ...policy, eligibleGroup: "Sales" };
 

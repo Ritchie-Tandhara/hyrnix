@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { recordAuditLog } from "./auditLog";
 import { runSimulation } from "./simulation";
 import { toEmployeeLite, toLeaveRequestLite, toPolicyLite } from "./mappers";
-import { selectPolicyVersionForDate } from "./policyVersion";
+import { selectPolicyVersionForDate, selectAvailableLeaveTypes } from "./policyVersion";
 import type { PolicyLite } from "./types";
 
 export async function listPolicies() {
@@ -195,4 +195,32 @@ export async function resolvePublishedPolicyForEmployee(employeeId: string, date
   const employeeRow = await prisma.employee.findUniqueOrThrow({ where: { id: employeeId } });
   const policyRows = await prisma.leavePolicy.findMany({ where: { status: "PUBLISHED" } });
   return selectPolicyVersionForDate(policyRows.map(toPolicyLite), toEmployeeLite(employeeRow), date);
+}
+
+/**
+ * Resolves the published policy version for one specific leave type
+ * (policyKey) that governs an employee on a given date — e.g. "which Sick
+ * Leave policy version applies to me today", distinct from Annual Leave's.
+ */
+export async function resolvePublishedPolicyForEmployeeAndKey(
+  employeeId: string,
+  date: Date,
+  policyKey: string
+): Promise<PolicyLite | null> {
+  const employeeRow = await prisma.employee.findUniqueOrThrow({ where: { id: employeeId } });
+  const policyRows = await prisma.leavePolicy.findMany({ where: { status: "PUBLISHED", policyKey } });
+  return selectPolicyVersionForDate(policyRows.map(toPolicyLite), toEmployeeLite(employeeRow), date);
+}
+
+/**
+ * Every distinct leave type (policyKey) an employee is eligible for as of a
+ * given date — one applicable published policy version per type. This is
+ * what powers the leave-type picker when applying for leave and the
+ * multi-type balance view, since a company can run several independent
+ * leave pools (Annual, Sick, Casual, ...) at once.
+ */
+export async function listAvailableLeaveTypesForEmployee(employeeId: string, date: Date): Promise<PolicyLite[]> {
+  const employeeRow = await prisma.employee.findUniqueOrThrow({ where: { id: employeeId } });
+  const policyRows = await prisma.leavePolicy.findMany({ where: { status: "PUBLISHED" } });
+  return selectAvailableLeaveTypes(policyRows.map(toPolicyLite), toEmployeeLite(employeeRow), date);
 }

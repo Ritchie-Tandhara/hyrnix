@@ -36,3 +36,24 @@ export function selectPolicyVersionForDate(
 
   return candidates[0];
 }
+
+/**
+ * Every distinct leave type (policyKey) an employee is eligible for as of a
+ * given date — one applicable published policy version per type, resolved
+ * the same way selectPolicyVersionForDate resolves a single policy. A
+ * company can run several independent leave pools (Annual, Sick, Casual,
+ * ...) at once; this is what lists them for a leave-type picker or a
+ * per-type balance view.
+ */
+export function selectAvailableLeaveTypes(
+  policies: PolicyLite[],
+  employee: EmployeeLite,
+  date: Date
+): PolicyLite[] {
+  const policyKeys = Array.from(new Set(policies.map((p) => p.policyKey)));
+
+  return policyKeys
+    .map((key) => selectPolicyVersionForDate(policies.filter((p) => p.policyKey === key), employee, date))
+    .filter((p): p is PolicyLite => p !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

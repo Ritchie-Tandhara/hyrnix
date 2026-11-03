@@ -22,6 +22,8 @@ export async function POST(req: Request) {
       startDate: new Date(body.startDate),
       endDate: new Date(body.endDate),
       daysRequested: body.daysRequested ? Number(body.daysRequested) : undefined,
+      halfDay: Boolean(body.halfDay),
+      policyKey: body.policyKey || undefined,
       actorId: body.actorId || undefined,
     });
     return NextResponse.json({ leaveRequest }, { status: 201 });

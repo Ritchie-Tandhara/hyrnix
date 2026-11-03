@@ -11,10 +11,18 @@ type LeaveRequest = {
   startDate: string;
   endDate: string;
   daysRequested: number;
+  halfDay: boolean;
   status: string;
   policyVersion: { name: string; version: number };
   decisionReasoning?: string | null;
   createdAt: string;
+};
+
+type LeaveType = {
+  policyId: string;
+  policyKey: string;
+  name: string;
+  balance: { remainingDays: number };
 };
 
 type RuleResult = { rule: string; passed: boolean; detail: string };
@@ -38,7 +46,8 @@ export default function ProcessXrayPage() {
   const [traces, setTraces] = useState<Trace[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ employeeId: "", startDate: "", endDate: "" });
+  const [form, setForm] = useState({ employeeId: "", policyKey: "", startDate: "", endDate: "", halfDay: false });
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
 
   function loadRequests() {
     const qs = actingUserId ? `?callerId=${encodeURIComponent(actingUserId)}` : "";
@@ -63,7 +72,21 @@ export default function ProcessXrayPage() {
       .then((d) => setTraces(d.traces ?? []));
   }, [selectedId, actingUserId]);
 
+  const targetEmployeeId = admin ? form.employeeId : actingUserId;
+
+  useEffect(() => {
+    if (!targetEmployeeId) return;
+    fetch(`/api/leave-types?employeeId=${encodeURIComponent(targetEmployeeId)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const types: LeaveType[] = d.leaveTypes ?? [];
+        setLeaveTypes(types);
+        setForm((f) => (types.some((t) => t.policyKey === f.policyKey) ? f : { ...f, policyKey: types[0]?.policyKey ?? "" }));
+      });
+  }, [targetEmployeeId]);
+
   const selected = requests.find((r) => r.id === selectedId) ?? null;
+  const sameDayRequest = form.startDate !== "" && form.startDate === form.endDate;
 
   async function submitRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +95,7 @@ export default function ProcessXrayPage() {
     const res = await fetch("/api/leave-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, employeeId, actorId: actingUserId }),
+      body: JSON.stringify({ ...form, employeeId, halfDay: sameDayRequest && form.halfDay, actorId: actingUserId }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -80,6 +103,7 @@ export default function ProcessXrayPage() {
       return;
     }
     setShowForm(false);
+    setForm((f) => ({ ...f, startDate: "", endDate: "", halfDay: false }));
     loadRequests();
     setSelectedId(data.leaveRequest.id);
   }
@@ -128,6 +152,23 @@ export default function ProcessXrayPage() {
             )}
           </label>
           <label className="text-sm">
+            <span className="mb-1 block font-medium text-foreground">Leave type</span>
+            <select
+              required
+              className="w-full rounded border border-border px-2 py-1.5"
+              value={form.policyKey}
+              onChange={(e) => setForm((f) => ({ ...f, policyKey: e.target.value }))}
+              disabled={leaveTypes.length === 0}
+            >
+              {leaveTypes.length === 0 && <option value="">no leave type available</option>}
+              {leaveTypes.map((t) => (
+                <option key={t.policyKey} value={t.policyKey}>
+                  {t.name} ({t.balance.remainingDays}d left)
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
             <span className="mb-1 block font-medium text-foreground">Start date</span>
             <input
               type="date"
@@ -147,8 +188,20 @@ export default function ProcessXrayPage() {
               onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
             />
           </label>
-          <div className="flex items-end">
-            <button type="submit" className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+
+          <div className="col-span-4 flex items-center justify-between">
+            <label
+              className={`flex items-center gap-2 text-sm ${sameDayRequest ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              <input
+                type="checkbox"
+                disabled={!sameDayRequest}
+                checked={sameDayRequest && form.halfDay}
+                onChange={(e) => setForm((f) => ({ ...f, halfDay: e.target.checked }))}
+              />
+              Half day {!sameDayRequest && "(same start/end date only)"}
+            </label>
+            <button type="submit" className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">
               Submit &amp; evaluate
             </button>
           </div>
@@ -173,8 +226,8 @@ export default function ProcessXrayPage() {
                     <StatusBadge status={r.status} />
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {r.startDate.slice(0, 10)} → {r.endDate.slice(0, 10)} · {r.daysRequested}d · {r.policyVersion.name} v
-                    {r.policyVersion.version}
+                    {r.startDate.slice(0, 10)} → {r.endDate.slice(0, 10)} · {r.daysRequested}d
+                    {r.halfDay && " (half day)"} · {r.policyVersion.name} v{r.policyVersion.version}
                   </div>
                 </button>
               </li>
@@ -190,6 +243,7 @@ export default function ProcessXrayPage() {
               <div>
                 <h2 className="text-lg font-medium text-foreground">
                   {selected.employee.name} — {selected.daysRequested} day(s)
+                  {selected.halfDay && <span className="ml-2 rounded bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">Half day</span>}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {selected.startDate.slice(0, 10)} → {selected.endDate.slice(0, 10)} · evaluated against{" "}
