@@ -8,6 +8,7 @@ import {
   FlaskConical,
   ScanSearch,
   Sparkles,
+  BarChart3,
   ShieldCheck,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const LINKS = [
   { href: "/policy-lab", label: "Policy Lab", icon: FlaskConical },
   { href: "/process-xray", label: "Process X-Ray", icon: ScanSearch },
   { href: "/hyrnix-iq", label: "HYRNIX IQ", icon: Sparkles },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/administration", label: "Administration", icon: ShieldCheck },
 ];
 

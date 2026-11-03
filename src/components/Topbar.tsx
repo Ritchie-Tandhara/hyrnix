@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/policy-lab", label: "Policy Lab" },
   { href: "/process-xray", label: "Process X-Ray" },
   { href: "/hyrnix-iq", label: "HYRNIX IQ" },
+  { href: "/analytics", label: "Analytics" },
   { href: "/administration", label: "Administration" },
 ];
 
