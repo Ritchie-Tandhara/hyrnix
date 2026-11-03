@@ -1,0 +1,234 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useActingUser } from "@/components/ActingUserContext";
+import StatusBadge from "@/components/StatusBadge";
+
+type LeaveRequest = {
+  id: string;
+  employee: { id: string; name: string; department: string };
+  startDate: string;
+  endDate: string;
+  daysRequested: number;
+  status: string;
+  policyVersion: { name: string; version: number };
+  decisionReasoning?: string | null;
+  createdAt: string;
+};
+
+type RuleResult = { rule: string; passed: boolean; detail: string };
+type Trace = {
+  id: string;
+  triggerEvent: string;
+  outcome: string;
+  timestamp: string;
+  rulesEvaluated: string;
+  inputs: string;
+};
+
+type SimpleEmployee = { id: string; name: string; department: string };
+
+export default function ProcessXrayPage() {
+  const { actingUserId } = useActingUser();
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [employees, setEmployees] = useState<SimpleEmployee[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [traces, setTraces] = useState<Trace[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ employeeId: "", startDate: "", endDate: "" });
+
+  function loadRequests() {
+    fetch("/api/leave-requests")
+      .then((r) => r.json())
+      .then((d) => setRequests(d.leaveRequests ?? []));
+  }
+
+  useEffect(() => {
+    loadRequests();
+    fetch("/api/employees")
+      .then((r) => r.json())
+      .then((d) => setEmployees(d.employees ?? []));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    fetch(`/api/leave-requests/${selectedId}/trace`)
+      .then((r) => r.json())
+      .then((d) => setTraces(d.traces ?? []));
+  }, [selectedId]);
+
+  const selected = requests.find((r) => r.id === selectedId) ?? null;
+
+  async function submitRequest(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const res = await fetch("/api/leave-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, actorId: actingUserId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Failed to submit leave request");
+      return;
+    }
+    setShowForm(false);
+    loadRequests();
+    setSelectedId(data.leaveRequest.id);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Process X-Ray</h1>
+          <p className="mt-1 max-w-2xl text-slate-600">
+            Pick a leave request to see exactly which policy version and rules produced its outcome.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+        >
+          {showForm ? "Cancel" : "Submit leave request"}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={submitRequest} className="grid grid-cols-4 gap-3 rounded-lg border border-slate-200 bg-white p-5">
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Employee</span>
+            <select
+              required
+              className="w-full rounded border border-slate-300 px-2 py-1.5"
+              value={form.employeeId}
+              onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}
+            >
+              <option value="">select…</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name} ({e.department})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Start date</span>
+            <input
+              type="date"
+              required
+              className="w-full rounded border border-slate-300 px-2 py-1.5"
+              value={form.startDate}
+              onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-slate-700">End date</span>
+            <input
+              type="date"
+              required
+              className="w-full rounded border border-slate-300 px-2 py-1.5"
+              value={form.endDate}
+              onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+            />
+          </label>
+          <div className="flex items-end">
+            <button type="submit" className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+              Submit &amp; evaluate
+            </button>
+          </div>
+          {error && <p className="col-span-4 text-sm text-rose-600">{error}</p>}
+        </form>
+      )}
+
+      <div className="grid grid-cols-5 gap-6">
+        <div className="col-span-2 rounded-lg border border-slate-200 bg-white p-4">
+          <h2 className="mb-3 text-sm font-medium text-slate-500">Leave requests</h2>
+          <ul className="divide-y divide-slate-100">
+            {requests.map((r) => (
+              <li key={r.id}>
+                <button
+                  onClick={() => setSelectedId(r.id)}
+                  className={`block w-full px-2 py-2 text-left text-sm hover:bg-slate-50 ${
+                    selectedId === r.id ? "bg-slate-100" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-800">{r.employee.name}</span>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {r.startDate.slice(0, 10)} → {r.endDate.slice(0, 10)} · {r.daysRequested}d · {r.policyVersion.name} v
+                    {r.policyVersion.version}
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="col-span-3 rounded-lg border border-slate-200 bg-white p-5">
+          {!selected ? (
+            <p className="text-sm text-slate-500">Select a leave request to see its decision trace.</p>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-medium text-slate-900">
+                  {selected.employee.name} — {selected.daysRequested} day(s)
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {selected.startDate.slice(0, 10)} → {selected.endDate.slice(0, 10)} · evaluated against{" "}
+                  <span className="font-medium">
+                    {selected.policyVersion.name} v{selected.policyVersion.version}
+                  </span>
+                </p>
+                <div className="mt-2">
+                  <StatusBadge status={selected.status} />
+                </div>
+              </div>
+
+              <div className="rounded border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
+                {selected.decisionReasoning}
+              </div>
+
+              <div>
+                <h3 className="mb-2 text-sm font-medium text-slate-500">Step-by-step trace</h3>
+                {traces.map((t) => {
+                  const rules: RuleResult[] = JSON.parse(t.rulesEvaluated);
+                  return (
+                    <div key={t.id} className="mb-3 rounded border border-slate-200 p-3">
+                      <div className="mb-2 text-xs text-slate-400">
+                        {t.triggerEvent} · {new Date(t.timestamp).toLocaleString()}
+                      </div>
+                      <ol className="space-y-2">
+                        {rules.map((rule, i) => (
+                          <li key={i} className="flex gap-2 text-sm">
+                            <span
+                              className={`mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                rule.passed ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                              }`}
+                            >
+                              {rule.passed ? "✓" : "✗"}
+                            </span>
+                            <div>
+                              <div className="font-medium text-slate-800">{rule.rule.replace(/_/g, " ")}</div>
+                              <div className="text-slate-500">{rule.detail}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                      <div className="mt-2 text-sm font-medium">
+                        Outcome: <StatusBadge status={t.outcome} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

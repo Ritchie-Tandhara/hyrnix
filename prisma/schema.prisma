@@ -1,0 +1,150 @@
+// HYRNIX Prisma schema
+// SQLite for local dev. Kept portable to Postgres: no SQLite-only features.
+// NOTE: SQLite connector does not support native Prisma `enum`, so status/role
+// fields are plain String columns with allowed values documented in comments.
+// When porting to Postgres, these can be promoted to real `enum` types.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Role: "ADMIN" | "HR" | "MANAGER" | "EMPLOYEE"
+// PolicyStatus: "DRAFT" | "SIMULATED" | "PENDING_APPROVAL" | "PUBLISHED" | "ARCHIVED"
+// AccrualRule: "ANNUAL_UPFRONT" | "MONTHLY_ACCRUAL"
+// LeaveRequestStatus: "PENDING" | "APPROVED" | "REJECTED"
+
+model Employee {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  department String
+  role       String   @default("EMPLOYEE")
+  hireDate   DateTime
+  managerId  String?
+  manager    Employee?  @relation("ManagerReports", fields: [managerId], references: [id])
+  reports    Employee[] @relation("ManagerReports")
+
+  leaveRequests      LeaveRequest[]        @relation("EmployeeLeaveRequests")
+  decidedRequests    LeaveRequest[]        @relation("DecidedByEmployee")
+  createdPolicies    LeavePolicy[]         @relation("CreatedByEmployee")
+  approvedPolicies   LeavePolicy[]         @relation("ApprovedByEmployee")
+  simulationRuns     SimulationRun[]       @relation("RunByEmployee")
+  auditLogs          AuditLog[]            @relation("ActorEmployee")
+  processTraceActs   ProcessTrace[]        @relation("TraceActorEmployee")
+  hyrnixQueries      HyrnixQuery[]         @relation("AskedByEmployee")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeavePolicy {
+  id          String   @id @default(cuid())
+  policyKey   String   // groups versions of the "same" policy together, e.g. "standard-annual-leave"
+  name        String
+  version     Int
+  description String?
+
+  entitlementDays   Float
+  eligibleGroup     String // department name or "all"
+  accrualRule       String  @default("ANNUAL_UPFRONT")
+  carryForwardDays  Float   @default(0)
+  effectiveDate     DateTime
+  status            String  @default("DRAFT")
+
+  createdById  String
+  createdBy    Employee  @relation("CreatedByEmployee", fields: [createdById], references: [id])
+  approvedById String?
+  approvedBy   Employee? @relation("ApprovedByEmployee", fields: [approvedById], references: [id])
+
+  leaveRequests  LeaveRequest[]  @relation("PolicyVersionRequests")
+  simulationRuns SimulationRun[] @relation("SimulatedPolicy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([policyKey, version])
+}
+
+model LeaveRequest {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id])
+  startDate      DateTime
+  endDate        DateTime
+  daysRequested  Float
+  status         String   @default("PENDING")
+
+  policyVersionId String
+  policyVersion   LeavePolicy @relation("PolicyVersionRequests", fields: [policyVersionId], references: [id])
+
+  decisionReasoning String? // human-readable summary, structured detail lives in ProcessTrace
+
+  decidedById String?
+  decidedBy   Employee? @relation("DecidedByEmployee", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+
+  processTraces ProcessTrace[] @relation("LeaveRequestTraces")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SimulationRun {
+  id       String      @id @default(cuid())
+  policyId String
+  policy   LeavePolicy @relation("SimulatedPolicy", fields: [policyId], references: [id])
+
+  runById String
+  runBy   Employee @relation("RunByEmployee", fields: [runById], references: [id])
+  runAt   DateTime @default(now())
+
+  inputSnapshot  String // JSON string
+  outputSnapshot String // JSON string
+
+  affectedEmployeeCount Int
+  totalDaysDelta        Float
+  conflictCount         Int @default(0)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   // "LeavePolicy" | "LeaveRequest" | "SimulationRun" | ...
+  entityId   String
+  action     String   // e.g. "STATUS_CHANGE", "CREATED", "SIMULATION_RUN"
+  actorId    String
+  actor      Employee @relation("ActorEmployee", fields: [actorId], references: [id])
+  details    String   // JSON string
+  timestamp  DateTime @default(now())
+}
+
+model ProcessTrace {
+  id             String       @id @default(cuid())
+  leaveRequestId String
+  leaveRequest   LeaveRequest @relation("LeaveRequestTraces", fields: [leaveRequestId], references: [id])
+
+  triggerEvent    String // e.g. "LEAVE_REQUEST_SUBMITTED", "LEAVE_REQUEST_EVALUATED"
+  policyVersionId String
+  rulesEvaluated  String // JSON string: array of {rule, passed, detail}
+  inputs          String // JSON string
+  outcome         String // e.g. "APPROVED", "REJECTED"
+
+  actorId   String?
+  actor     Employee? @relation("TraceActorEmployee", fields: [actorId], references: [id])
+  timestamp DateTime @default(now())
+}
+
+model HyrnixQuery {
+  id            String    @id @default(cuid())
+  question      String
+  matchedIntent String    // e.g. "WHY_LEAVE_DECISION" | "SIMULATE_POLICY_CHANGE" | "UNRECOGNIZED"
+  toolUsed      String    // e.g. "processTraceLookup" | "simulationEngine" | "none"
+  resultSummary String    // JSON string of the structured answer returned
+  askedById     String?
+  askedBy       Employee? @relation("AskedByEmployee", fields: [askedById], references: [id])
+  timestamp     DateTime  @default(now())
+}
