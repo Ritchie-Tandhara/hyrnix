@@ -6,9 +6,11 @@
 // lists what IS supported — never a fabricated answer.
 import { prisma } from "./prisma";
 import { explainLeaveDecisionTool, simulatePolicyChangeTool } from "./iqTools";
+import { lookupCaller } from "./authz";
+import { isAdminOrHr } from "./roles";
 
 export type HyrnixIqAnswer = {
-  intent: "WHY_LEAVE_DECISION" | "SIMULATE_POLICY_CHANGE" | "UNRECOGNIZED";
+  intent: "WHY_LEAVE_DECISION" | "SIMULATE_POLICY_CHANGE" | "UNRECOGNIZED" | "ACCESS_DENIED";
   toolUsed: string;
   message: string;
   data?: unknown;
@@ -41,26 +43,38 @@ export async function askHyrnixIq(question: string, askedById?: string): Promise
   const trimmed = question.trim();
   let answer: HyrnixIqAnswer;
 
+  const caller = await lookupCaller(askedById);
+  const callerIsAdmin = isAdminOrHr(caller?.role);
+
   const simulateMatch = trimmed.match(SIMULATE_RE);
   const whyMatch = trimmed.match(WHY_DECISION_RE);
 
   if (simulateMatch) {
-    const [, policyNameQuery, , toDays] = simulateMatch;
-    const toolResult = await simulatePolicyChangeTool.run({
-      policyNameQuery: policyNameQuery.trim(),
-      newEntitlementDays: Number(toDays),
-    });
+    if (caller && !callerIsAdmin) {
+      answer = {
+        intent: "ACCESS_DENIED",
+        toolUsed: "none",
+        message:
+          "Policy simulations show company-wide, cross-employee data, so they're only available to Admin and HR users. Ask me about your own leave requests instead.",
+      };
+    } else {
+      const [, policyNameQuery, , toDays] = simulateMatch;
+      const toolResult = await simulatePolicyChangeTool.run({
+        policyNameQuery: policyNameQuery.trim(),
+        newEntitlementDays: Number(toDays),
+      });
 
-    const message = !toolResult.found
-      ? toolResult.reason
-      : `If "${toolResult.policyName}" changed from ${toolResult.fromEntitlementDays} to ${toolResult.toEntitlementDays} days/year: ${toolResult.result.affectedEmployeeCount} employee(s) would be affected, with a total entitlement change of ${toolResult.result.totalEntitlementDelta >= 0 ? "+" : ""}${toolResult.result.totalEntitlementDelta} day(s) across them.${toolResult.result.conflicts.length > 0 ? ` Warning: ${toolResult.result.conflicts.length} conflict(s) detected with other active policies.` : ""}`;
+      const message = !toolResult.found
+        ? toolResult.reason
+        : `If "${toolResult.policyName}" changed from ${toolResult.fromEntitlementDays} to ${toolResult.toEntitlementDays} days/year: ${toolResult.result.affectedEmployeeCount} employee(s) would be affected, with a total entitlement change of ${toolResult.result.totalEntitlementDelta >= 0 ? "+" : ""}${toolResult.result.totalEntitlementDelta} day(s) across them.${toolResult.result.conflicts.length > 0 ? ` Warning: ${toolResult.result.conflicts.length} conflict(s) detected with other active policies.` : ""}`;
 
-    answer = {
-      intent: "SIMULATE_POLICY_CHANGE",
-      toolUsed: simulatePolicyChangeTool.name,
-      message,
-      data: toolResult,
-    };
+      answer = {
+        intent: "SIMULATE_POLICY_CHANGE",
+        toolUsed: simulatePolicyChangeTool.name,
+        message,
+        data: toolResult,
+      };
+    }
   } else if (whyMatch) {
     const subject = whyMatch[1].trim();
     const statusMatch = trimmed.match(STATUS_RE);
@@ -78,16 +92,24 @@ export async function askHyrnixIq(question: string, askedById?: string): Promise
         : { employeeNameQuery: subject, statusFilter }
     );
 
-    const message = !toolResult.found
-      ? toolResult.reason
-      : `${toolResult.employeeName}'s leave request (${toolResult.leaveRequestId}) was ${toolResult.status} under policy "${toolResult.policyName}" v${toolResult.policyVersion}. ${toolResult.reasoning}`;
+    if (toolResult.found && caller && !callerIsAdmin && toolResult.employeeId !== caller.id) {
+      answer = {
+        intent: "ACCESS_DENIED",
+        toolUsed: explainLeaveDecisionTool.name,
+        message: "You can only ask about your own leave requests, not a colleague's.",
+      };
+    } else {
+      const message = !toolResult.found
+        ? toolResult.reason
+        : `${toolResult.employeeName}'s leave request (${toolResult.leaveRequestId}) was ${toolResult.status} under policy "${toolResult.policyName}" v${toolResult.policyVersion}. ${toolResult.reasoning}`;
 
-    answer = {
-      intent: "WHY_LEAVE_DECISION",
-      toolUsed: explainLeaveDecisionTool.name,
-      message,
-      data: toolResult,
-    };
+      answer = {
+        intent: "WHY_LEAVE_DECISION",
+        toolUsed: explainLeaveDecisionTool.name,
+        message,
+        data: toolResult,
+      };
+    }
   } else {
     answer = fallback();
   }

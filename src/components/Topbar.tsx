@@ -4,22 +4,37 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useActingUser } from "./ActingUserContext";
 import ThemeToggle from "./ThemeToggle";
+import { isAdminOrHr } from "@/lib/roles";
 
 const LINKS = [
-  { href: "/", label: "Overview" },
-  { href: "/people", label: "People" },
-  { href: "/policy-lab", label: "Policy Lab" },
-  { href: "/process-xray", label: "Process X-Ray" },
-  { href: "/hyrnix-iq", label: "HYRNIX IQ" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/administration", label: "Administration" },
+  { href: "/", label: "Overview", adminOnly: false },
+  { href: "/people", label: "People", adminOnly: false },
+  { href: "/policy-lab", label: "Policy Lab", adminOnly: true },
+  { href: "/process-xray", label: "Process X-Ray", adminOnly: false },
+  { href: "/hyrnix-iq", label: "HYRNIX IQ", adminOnly: false },
+  { href: "/analytics", label: "Analytics", adminOnly: true },
+  { href: "/administration", label: "Administration", adminOnly: true },
 ];
+
+const ROLE_ORDER = ["ADMIN", "HR", "MANAGER", "EMPLOYEE"];
+const ROLE_GROUP_LABEL: Record<string, string> = {
+  ADMIN: "Admin",
+  HR: "HR",
+  MANAGER: "Manager",
+  EMPLOYEE: "Employee",
+};
 
 export default function Topbar() {
   const pathname = usePathname();
   const { employees, actingUserId, actingUser, setActingUserId, loading } = useActingUser();
 
-  const adminOrHr = employees.filter((e) => e.role === "ADMIN" || e.role === "HR");
+  const admin = isAdminOrHr(actingUser?.role);
+  const links = LINKS.filter((l) => !l.adminOnly || admin);
+
+  const employeesByRole = ROLE_ORDER.map((role) => ({
+    role,
+    members: employees.filter((e) => e.role === role).sort((a, b) => a.name.localeCompare(b.name)),
+  })).filter((g) => g.members.length > 0);
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur">
@@ -43,24 +58,33 @@ export default function Topbar() {
               value={actingUserId ?? ""}
               onChange={(e) => setActingUserId(e.target.value)}
             >
-              {adminOrHr.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name} ({e.role})
-                </option>
+              {employeesByRole.map((group) => (
+                <optgroup key={group.role} label={ROLE_GROUP_LABEL[group.role] ?? group.role}>
+                  {group.members.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} ({e.department})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           )}
           {actingUser && (
-            <span className="hidden rounded bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent sm:inline">
-              {actingUser.department}
-            </span>
+            <>
+              <span className="hidden rounded bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary sm:inline">
+                {ROLE_GROUP_LABEL[actingUser.role] ?? actingUser.role}
+              </span>
+              <span className="hidden rounded bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent sm:inline">
+                {actingUser.department}
+              </span>
+            </>
           )}
           <ThemeToggle />
         </div>
       </div>
 
       <nav className="flex gap-1 overflow-x-auto border-t border-border px-3 py-2 md:hidden">
-        {LINKS.map((link) => {
+        {links.map((link) => {
           const active = pathname === link.href;
           return (
             <Link

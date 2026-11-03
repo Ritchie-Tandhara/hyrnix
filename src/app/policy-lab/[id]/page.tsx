@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useActingUser } from "@/components/ActingUserContext";
 import StatusBadge from "@/components/StatusBadge";
+import RestrictedNotice from "@/components/RestrictedNotice";
+import { isAdminOrHr } from "@/lib/roles";
 
 type EmployeeImpact = {
   employeeId: string;
@@ -49,7 +51,7 @@ type PolicyDetail = {
 
 export default function PolicyDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { actingUserId } = useActingUser();
+  const { actingUserId, actingUser, loading: actingUserLoading } = useActingUser();
 
   const [policy, setPolicy] = useState<PolicyDetail | null>(null);
   const [simulationRuns, setSimulationRuns] = useState<SimulationRun[]>([]);
@@ -89,6 +91,10 @@ export default function PolicyDetailPage() {
     }
     if (data.result) setLatestResult(data.result);
     load();
+  }
+
+  if (!actingUserLoading && !isAdminOrHr(actingUser?.role)) {
+    return <RestrictedNotice />;
   }
 
   if (!policy) return <p className="text-muted-foreground">Loading…</p>;

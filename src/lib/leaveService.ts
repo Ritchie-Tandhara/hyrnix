@@ -4,9 +4,12 @@ import { toEmployeeLite, toLeaveRequestLite } from "./mappers";
 import { resolvePublishedPolicyForEmployee } from "./policyService";
 import { daysBetweenInclusive } from "./balance";
 import { recordAuditLog } from "./auditLog";
+import { isAdminOrHr } from "./roles";
+import { ForbiddenError, lookupCaller } from "./authz";
 
-export async function listLeaveRequests() {
+export async function listLeaveRequests(filter?: { employeeId?: string }) {
   return prisma.leaveRequest.findMany({
+    where: filter?.employeeId ? { employeeId: filter.employeeId } : undefined,
     include: { employee: true, policyVersion: true, decidedBy: true },
     orderBy: { createdAt: "desc" },
   });
@@ -35,6 +38,15 @@ export async function submitLeaveRequest(input: {
   actorId?: string; // defaults to the employee themself
 }) {
   const employeeRow = await prisma.employee.findUniqueOrThrow({ where: { id: input.employeeId } });
+
+  // Submitting leave for someone other than yourself requires Admin/HR.
+  if (input.actorId && input.actorId !== input.employeeId) {
+    const caller = await lookupCaller(input.actorId);
+    if (!caller || !isAdminOrHr(caller.role)) {
+      throw new ForbiddenError("Only Admin or HR users can submit a leave request on someone else's behalf.");
+    }
+  }
+
   const policy = await resolvePublishedPolicyForEmployee(input.employeeId, input.startDate);
 
   if (!policy) {

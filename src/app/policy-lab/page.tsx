@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useActingUser } from "@/components/ActingUserContext";
 import StatusBadge from "@/components/StatusBadge";
+import RestrictedNotice from "@/components/RestrictedNotice";
+import { isAdminOrHr } from "@/lib/roles";
 
 type Policy = {
   id: string;
@@ -21,7 +23,7 @@ type Policy = {
 };
 
 export default function PolicyLabPage() {
-  const { actingUserId } = useActingUser();
+  const { actingUserId, actingUser, loading: actingUserLoading } = useActingUser();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -73,6 +75,10 @@ export default function PolicyLabPage() {
     key,
     versions: policies.filter((p) => p.policyKey === key).sort((a, b) => b.version - a.version),
   }));
+
+  if (!actingUserLoading && !isAdminOrHr(actingUser?.role)) {
+    return <RestrictedNotice />;
+  }
 
   return (
     <div className="space-y-6">

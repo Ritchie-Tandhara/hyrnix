@@ -1,7 +1,23 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import StatusBadge from "@/components/StatusBadge";
-import { Users, CheckCircle2, GitBranch, Clock, CalendarDays, FlaskConical, type LucideIcon } from "lucide-react";
+import { getActingEmployee } from "@/lib/actingUserServer";
+import { isAdminOrHr } from "@/lib/roles";
+import { resolvePublishedPolicyForEmployee } from "@/lib/policyService";
+import { calculateBalance } from "@/lib/balance";
+import { toEmployeeLite, toLeaveRequestLite } from "@/lib/mappers";
+import type { Employee } from "@prisma/client";
+import {
+  Users,
+  CheckCircle2,
+  GitBranch,
+  Clock,
+  CalendarDays,
+  FlaskConical,
+  Wallet,
+  CalendarCheck2,
+  type LucideIcon,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +49,37 @@ async function getStats() {
   };
 }
 
+async function getMyOverview(employeeRow: Employee) {
+  const asOfDate = new Date();
+  const [policyRow, myRequestRows] = await Promise.all([
+    resolvePublishedPolicyForEmployee(employeeRow.id, asOfDate),
+    prisma.leaveRequest.findMany({
+      where: { employeeId: employeeRow.id },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { policyVersion: true },
+    }),
+  ]);
+
+  let balance = null;
+  if (policyRow) {
+    const allMyRequestRows = await prisma.leaveRequest.findMany({ where: { employeeId: employeeRow.id } });
+    balance = calculateBalance(
+      toEmployeeLite(employeeRow),
+      policyRow,
+      allMyRequestRows.map(toLeaveRequestLite),
+      asOfDate
+    );
+  }
+
+  const [pendingCount, approvedCount] = await Promise.all([
+    prisma.leaveRequest.count({ where: { employeeId: employeeRow.id, status: "PENDING" } }),
+    prisma.leaveRequest.count({ where: { employeeId: employeeRow.id, status: "APPROVED" } }),
+  ]);
+
+  return { policy: policyRow, balance, myRequests: myRequestRows, pendingCount, approvedCount };
+}
+
 type Accent = "primary" | "accent" | "success" | "warning" | "danger";
 
 const ACCENT_CLASSES: Record<Accent, string> = {
@@ -43,6 +90,15 @@ const ACCENT_CLASSES: Record<Accent, string> = {
   danger: "bg-danger-soft text-danger",
 };
 
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-sm font-medium text-foreground">{value}</div>
+    </div>
+  );
+}
+
 function StatCard({
   label,
   value,
@@ -51,7 +107,7 @@ function StatCard({
   accent,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   href: string;
   icon: LucideIcon;
   accent: Accent;
@@ -73,6 +129,112 @@ function StatCard({
 }
 
 export default async function OverviewPage() {
+  const actingEmployee = await getActingEmployee();
+
+  // Non-admin/HR actors get a personalized "my leave" view instead of
+  // company-wide numbers (headcount, aggregate policy/simulation counts,
+  // everyone's recent requests), which aren't theirs to see.
+  if (actingEmployee && !isAdminOrHr(actingEmployee.role)) {
+    const my = await getMyOverview(actingEmployee);
+
+    const myCards: Array<{ label: string; value: string; href: string; icon: LucideIcon; accent: Accent }> = [
+      {
+        label: "Remaining balance",
+        value: my.balance ? `${my.balance.remainingDays}d` : "—",
+        href: "/process-xray",
+        icon: Wallet,
+        accent: "primary",
+      },
+      {
+        label: "Approved this year",
+        value: String(my.approvedCount),
+        href: "/process-xray",
+        icon: CheckCircle2,
+        accent: "success",
+      },
+      {
+        label: "Pending requests",
+        value: String(my.pendingCount),
+        href: "/process-xray",
+        icon: Clock,
+        accent: "warning",
+      },
+    ];
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Welcome, {actingEmployee.name.split(" ")[0]}</h1>
+          <p className="mt-2 max-w-2xl text-muted-foreground">
+            Your leave balance and recent requests. Ask HYRNIX IQ why a request was decided, or submit a new one
+            from Process X-Ray.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {myCards.map((c) => (
+            <StatCard key={c.label} label={c.label} value={c.value} href={c.href} icon={c.icon} accent={c.accent} />
+          ))}
+        </div>
+
+        {my.policy && my.balance && (
+          <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-medium text-foreground">
+              <CalendarCheck2 size={18} className="text-primary" /> {my.policy.name} v{my.policy.version}
+            </h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <Field label="Entitlement" value={`${my.balance.entitlementDays}d`} />
+              <Field label="Accrued so far" value={`${my.balance.accruedDays}d`} />
+              <Field label="Used" value={`${my.balance.usedDays}d`} />
+              <Field label="Remaining" value={`${my.balance.remainingDays}d`} />
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-medium text-foreground">Your recent leave requests</h2>
+          {my.myRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">You haven&apos;t submitted a leave request yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Dates</th>
+                    <th className="py-2 pr-4 font-medium">Days</th>
+                    <th className="py-2 pr-4 font-medium">Policy version</th>
+                    <th className="py-2 pr-4 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {my.myRequests.map((r) => (
+                    <tr key={r.id} className="border-b border-border last:border-0">
+                      <td className="py-3 pr-4 text-muted-foreground">
+                        {r.startDate.toISOString().slice(0, 10)} → {r.endDate.toISOString().slice(0, 10)}
+                      </td>
+                      <td className="py-3 pr-4">{r.daysRequested}</td>
+                      <td className="py-3 pr-4 text-muted-foreground">
+                        {r.policyVersion.name} v{r.policyVersion.version}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <StatusBadge status={r.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="mt-4">
+            <Link href="/process-xray" className="text-sm font-medium text-primary hover:underline">
+              Open Process X-Ray →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const stats = await getStats();
 
   const cards: Array<{ label: string; value: number; href: string; icon: LucideIcon; accent: Accent }> = [

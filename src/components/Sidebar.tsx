@@ -11,19 +11,24 @@ import {
   BarChart3,
   ShieldCheck,
 } from "lucide-react";
+import { useActingUser } from "./ActingUserContext";
+import { isAdminOrHr } from "@/lib/roles";
 
 const LINKS = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/people", label: "People", icon: Users },
-  { href: "/policy-lab", label: "Policy Lab", icon: FlaskConical },
-  { href: "/process-xray", label: "Process X-Ray", icon: ScanSearch },
-  { href: "/hyrnix-iq", label: "HYRNIX IQ", icon: Sparkles },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/administration", label: "Administration", icon: ShieldCheck },
+  { href: "/", label: "Overview", icon: LayoutDashboard, adminOnly: false },
+  { href: "/people", label: "People", icon: Users, adminOnly: false },
+  { href: "/policy-lab", label: "Policy Lab", icon: FlaskConical, adminOnly: true },
+  { href: "/process-xray", label: "Process X-Ray", icon: ScanSearch, adminOnly: false },
+  { href: "/hyrnix-iq", label: "HYRNIX IQ", icon: Sparkles, adminOnly: false },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, adminOnly: true },
+  { href: "/administration", label: "Administration", icon: ShieldCheck, adminOnly: true },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { actingUser } = useActingUser();
+  const admin = isAdminOrHr(actingUser?.role);
+  const links = LINKS.filter((l) => !l.adminOnly || admin);
 
   return (
     <aside className="hidden w-64 flex-shrink-0 border-r border-border bg-surface md:flex md:flex-col">
@@ -35,7 +40,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
-        {LINKS.map((link) => {
+        {links.map((link) => {
           const active = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
           const Icon = link.icon;
           return (

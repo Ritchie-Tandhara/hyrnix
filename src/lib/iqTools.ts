@@ -34,6 +34,7 @@ export type ExplainLeaveDecisionOutput =
   | {
       found: true;
       leaveRequestId: string;
+      employeeId: string;
       employeeName: string;
       status: string;
       policyName: string;
@@ -87,6 +88,7 @@ export const explainLeaveDecisionTool: ToolDefinition<
     return {
       found: true,
       leaveRequestId: request.id,
+      employeeId: request.employeeId,
       employeeName: request.employee.name,
       status: request.status,
       policyName: request.policyVersion.name,

@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getActingEmployee } from "@/lib/actingUserServer";
+import { isAdminOrHr } from "@/lib/roles";
+import RestrictedNotice from "@/components/RestrictedNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,11 @@ async function getData() {
 }
 
 export default async function AdministrationPage() {
+  const actingEmployee = await getActingEmployee();
+  if (!isAdminOrHr(actingEmployee?.role)) {
+    return <RestrictedNotice />;
+  }
+
   const { auditLogs, hyrnixQueries } = await getData();
 
   return (

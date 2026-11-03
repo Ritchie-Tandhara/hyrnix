@@ -3,6 +3,9 @@ import { BarChart } from "@/components/charts/BarChart";
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown";
 import { SplitBar } from "@/components/charts/SplitBar";
 import { DivergingBarChart } from "@/components/charts/DivergingBarChart";
+import { getActingEmployee } from "@/lib/actingUserServer";
+import { isAdminOrHr } from "@/lib/roles";
+import RestrictedNotice from "@/components/RestrictedNotice";
 import { Users, CheckCircle2, CalendarRange, Wallet, FileCheck2, Sparkles, type LucideIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +56,11 @@ function fmtDays(v: number | null) {
 }
 
 export default async function AnalyticsPage() {
+  const actingEmployee = await getActingEmployee();
+  if (!isAdminOrHr(actingEmployee?.role)) {
+    return <RestrictedNotice />;
+  }
+
   const data = await getAnalytics();
   const { kpis } = data;
 
@@ -152,7 +160,7 @@ export default async function AnalyticsPage() {
               segments={data.iqIntentBreakdown.map((i) => ({
                 label: i.intent === "UNRECOGNIZED" ? "Unrecognized" : i.intent.replace(/_/g, " "),
                 value: i.count,
-                className: i.intent === "UNRECOGNIZED" ? "bg-warning" : "bg-success",
+                className: i.intent === "UNRECOGNIZED" || i.intent === "ACCESS_DENIED" ? "bg-warning" : "bg-success",
               }))}
             />
           )}

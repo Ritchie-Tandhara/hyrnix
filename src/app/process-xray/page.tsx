@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useActingUser } from "@/components/ActingUserContext";
 import StatusBadge from "@/components/StatusBadge";
+import { isAdminOrHr } from "@/lib/roles";
 
 type LeaveRequest = {
   id: string;
@@ -29,7 +30,8 @@ type Trace = {
 type SimpleEmployee = { id: string; name: string; department: string };
 
 export default function ProcessXrayPage() {
-  const { actingUserId } = useActingUser();
+  const { actingUserId, actingUser } = useActingUser();
+  const admin = isAdminOrHr(actingUser?.role);
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [employees, setEmployees] = useState<SimpleEmployee[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,7 +41,8 @@ export default function ProcessXrayPage() {
   const [form, setForm] = useState({ employeeId: "", startDate: "", endDate: "" });
 
   function loadRequests() {
-    fetch("/api/leave-requests")
+    const qs = actingUserId ? `?callerId=${encodeURIComponent(actingUserId)}` : "";
+    fetch(`/api/leave-requests${qs}`)
       .then((r) => r.json())
       .then((d) => setRequests(d.leaveRequests ?? []));
   }
@@ -49,24 +52,27 @@ export default function ProcessXrayPage() {
     fetch("/api/employees")
       .then((r) => r.json())
       .then((d) => setEmployees(d.employees ?? []));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actingUserId]);
 
   useEffect(() => {
     if (!selectedId) return;
-    fetch(`/api/leave-requests/${selectedId}/trace`)
+    const qs = actingUserId ? `?callerId=${encodeURIComponent(actingUserId)}` : "";
+    fetch(`/api/leave-requests/${selectedId}/trace${qs}`)
       .then((r) => r.json())
       .then((d) => setTraces(d.traces ?? []));
-  }, [selectedId]);
+  }, [selectedId, actingUserId]);
 
   const selected = requests.find((r) => r.id === selectedId) ?? null;
 
   async function submitRequest(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const employeeId = admin ? form.employeeId : actingUserId ?? "";
     const res = await fetch("/api/leave-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, actorId: actingUserId }),
+      body: JSON.stringify({ ...form, employeeId, actorId: actingUserId }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -84,7 +90,9 @@ export default function ProcessXrayPage() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Process X-Ray</h1>
           <p className="mt-1 max-w-2xl text-muted-foreground">
-            Pick a leave request to see exactly which policy version and rules produced its outcome.
+            {admin
+              ? "Pick a leave request to see exactly which policy version and rules produced its outcome."
+              : "Your leave requests, and exactly why each one was approved or rejected."}
           </p>
         </div>
         <button
@@ -99,19 +107,25 @@ export default function ProcessXrayPage() {
         <form onSubmit={submitRequest} className="grid grid-cols-4 gap-3 rounded-xl border border-border bg-surface shadow-sm p-5">
           <label className="text-sm">
             <span className="mb-1 block font-medium text-foreground">Employee</span>
-            <select
-              required
-              className="w-full rounded border border-border px-2 py-1.5"
-              value={form.employeeId}
-              onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}
-            >
-              <option value="">select…</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name} ({e.department})
-                </option>
-              ))}
-            </select>
+            {admin ? (
+              <select
+                required
+                className="w-full rounded border border-border px-2 py-1.5"
+                value={form.employeeId}
+                onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}
+              >
+                <option value="">select…</option>
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name} ({e.department})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex w-full items-center rounded border border-border bg-surface-muted px-2 py-1.5 text-muted-foreground">
+                You ({actingUser?.name})
+              </div>
+            )}
           </label>
           <label className="text-sm">
             <span className="mb-1 block font-medium text-foreground">Start date</span>
@@ -144,7 +158,7 @@ export default function ProcessXrayPage() {
 
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-2 rounded-xl border border-border bg-surface shadow-sm p-4">
-          <h2 className="mb-3 text-sm font-medium text-muted-foreground">Leave requests</h2>
+          <h2 className="mb-3 text-sm font-medium text-muted-foreground">{admin ? "Leave requests" : "Your leave requests"}</h2>
           <ul className="divide-y divide-border">
             {requests.map((r) => (
               <li key={r.id}>

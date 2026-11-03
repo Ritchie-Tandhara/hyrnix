@@ -27,6 +27,15 @@ const ActingUserContext = createContext<ActingUserContextValue>({
 });
 
 const STORAGE_KEY = "hyrnix.actingUserId";
+const COOKIE_KEY = "hyrnix_acting_user_id";
+
+function syncCookie(id: string) {
+  try {
+    document.cookie = `${COOKIE_KEY}=${id}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // ignore (cookies disabled, etc.)
+  }
+}
 
 export function ActingUserProvider({ children }: { children: React.ReactNode }) {
   const [employees, setEmployees] = useState<SimpleEmployee[]>([]);
@@ -50,6 +59,7 @@ export function ActingUserProvider({ children }: { children: React.ReactNode }) 
         const adminOrHr = all.filter((e) => e.role === "ADMIN" || e.role === "HR");
         const initial = (stored && all.some((e) => e.id === stored)) ? stored : adminOrHr[0]?.id ?? all[0]?.id ?? null;
         setActingUserIdState(initial);
+        if (initial) syncCookie(initial);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -57,6 +67,7 @@ export function ActingUserProvider({ children }: { children: React.ReactNode }) 
 
   function setActingUserId(id: string) {
     setActingUserIdState(id);
+    syncCookie(id);
     try {
       localStorage.setItem(STORAGE_KEY, id);
     } catch {
