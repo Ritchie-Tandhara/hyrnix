@@ -71,10 +71,10 @@ export default function Topbar() {
           )}
           {actingUser && (
             <>
-              <span className="hidden rounded bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary sm:inline">
+              <span className="hidden w-20 flex-shrink-0 truncate rounded bg-primary-soft px-2 py-0.5 text-center text-xs font-medium text-primary sm:inline-block">
                 {ROLE_GROUP_LABEL[actingUser.role] ?? actingUser.role}
               </span>
-              <span className="hidden rounded bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent sm:inline">
+              <span className="hidden w-24 flex-shrink-0 truncate rounded bg-accent-soft px-2 py-0.5 text-center text-xs font-medium text-accent sm:inline-block">
                 {actingUser.department}
               </span>
             </>
