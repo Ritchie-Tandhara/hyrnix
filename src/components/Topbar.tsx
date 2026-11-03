@@ -6,6 +6,7 @@ import { useActingUser } from "./ActingUserContext";
 import ThemeToggle from "./ThemeToggle";
 import { isAdminOrHr } from "@/lib/roles";
 import { ChevronDown } from "lucide-react";
+import HyrnixLogo from "./HyrnixLogo";
 
 const LINKS = [
   { href: "/", label: "Overview", adminOnly: false },
@@ -40,7 +41,8 @@ export default function Topbar() {
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-5 py-3 sm:px-8">
-        <Link href="/" className="text-base font-semibold tracking-tight text-primary md:hidden">
+        <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-tight text-primary md:hidden">
+          <HyrnixLogo size={24} />
           HYRNIX
         </Link>
 

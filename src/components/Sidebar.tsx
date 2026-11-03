@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useActingUser } from "./ActingUserContext";
 import { isAdminOrHr } from "@/lib/roles";
+import HyrnixLogo from "./HyrnixLogo";
 
 const LINKS = [
   { href: "/", label: "Overview", icon: LayoutDashboard, adminOnly: false },
@@ -33,9 +34,7 @@ export default function Sidebar() {
   return (
     <aside className="hidden w-64 flex-shrink-0 border-r border-border bg-surface md:flex md:flex-col">
       <div className="flex items-center gap-2 px-6 py-6">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-          H
-        </span>
+        <HyrnixLogo size={32} />
         <span className="text-lg font-semibold tracking-tight text-foreground">HYRNIX</span>
       </div>
 
