@@ -78,27 +78,27 @@ export default function PolicyLabPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Policy Lab</h1>
-          <p className="mt-1 max-w-2xl text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Policy Lab</h1>
+          <p className="mt-1 max-w-2xl text-muted-foreground">
             Propose a leave policy change, simulate its impact against real employee data, then move it
             through approval to publication.
           </p>
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           {showForm ? "Cancel" : "Propose policy change"}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={createDraft} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5">
+        <form onSubmit={createDraft} className="space-y-4 rounded-lg border border-border bg-surface p-5">
           <div className="grid grid-cols-2 gap-4">
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Policy key (group)</span>
+              <span className="mb-1 block font-medium text-foreground">Policy key (group)</span>
               <select
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.policyKey}
                 onChange={(e) => {
                   const key = e.target.value;
@@ -117,29 +117,29 @@ export default function PolicyLabPage() {
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Name</span>
+              <span className="mb-1 block font-medium text-foreground">Name</span>
               <input
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Entitlement days / year</span>
+              <span className="mb-1 block font-medium text-foreground">Entitlement days / year</span>
               <input
                 type="number"
                 step="0.5"
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.entitlementDays}
                 onChange={(e) => setForm((f) => ({ ...f, entitlementDays: Number(e.target.value) }))}
               />
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Eligible group</span>
+              <span className="mb-1 block font-medium text-foreground">Eligible group</span>
               <select
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.eligibleGroup}
                 onChange={(e) => setForm((f) => ({ ...f, eligibleGroup: e.target.value }))}
               >
@@ -154,9 +154,9 @@ export default function PolicyLabPage() {
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Accrual rule</span>
+              <span className="mb-1 block font-medium text-foreground">Accrual rule</span>
               <select
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.accrualRule}
                 onChange={(e) => setForm((f) => ({ ...f, accrualRule: e.target.value }))}
               >
@@ -166,54 +166,54 @@ export default function PolicyLabPage() {
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Carry-forward days (max)</span>
+              <span className="mb-1 block font-medium text-foreground">Carry-forward days (max)</span>
               <input
                 type="number"
                 step="0.5"
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.carryForwardDays}
                 onChange={(e) => setForm((f) => ({ ...f, carryForwardDays: Number(e.target.value) }))}
               />
             </label>
 
             <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Effective date</span>
+              <span className="mb-1 block font-medium text-foreground">Effective date</span>
               <input
                 type="date"
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.effectiveDate}
                 onChange={(e) => setForm((f) => ({ ...f, effectiveDate: e.target.value }))}
               />
             </label>
 
             <label className="col-span-2 block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Description (optional)</span>
+              <span className="mb-1 block font-medium text-foreground">Description (optional)</span>
               <input
-                className="w-full rounded border border-slate-300 px-2 py-1.5"
+                className="w-full rounded border border-border px-2 py-1.5"
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
             </label>
           </div>
 
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
 
-          <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
             Create draft
           </button>
         </form>
       )}
 
       {loading ? (
-        <p className="text-slate-500">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : (
         <div className="space-y-6">
           {grouped.map((g) => (
-            <div key={g.key} className="rounded-lg border border-slate-200 bg-white p-5">
-              <h2 className="mb-3 font-mono text-sm text-slate-500">{g.key}</h2>
+            <div key={g.key} className="rounded-lg border border-border bg-surface p-5">
+              <h2 className="mb-3 font-mono text-sm text-muted-foreground">{g.key}</h2>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                  <tr className="border-b border-border text-left text-muted-foreground">
                     <th className="py-2 pr-4">Version</th>
                     <th className="py-2 pr-4">Name</th>
                     <th className="py-2 pr-4">Entitlement</th>
@@ -225,20 +225,20 @@ export default function PolicyLabPage() {
                 </thead>
                 <tbody>
                   {g.versions.map((p) => (
-                    <tr key={p.id} className="border-b border-slate-100">
+                    <tr key={p.id} className="border-b border-border">
                       <td className="py-2 pr-4">v{p.version}</td>
                       <td className="py-2 pr-4">
-                        <Link href={`/policy-lab/${p.id}`} className="font-medium text-slate-900 underline">
+                        <Link href={`/policy-lab/${p.id}`} className="font-medium text-foreground underline">
                           {p.name}
                         </Link>
                       </td>
                       <td className="py-2 pr-4">{p.entitlementDays} days</td>
                       <td className="py-2 pr-4">{p.eligibleGroup}</td>
-                      <td className="py-2 pr-4 text-slate-500">{p.effectiveDate.slice(0, 10)}</td>
+                      <td className="py-2 pr-4 text-muted-foreground">{p.effectiveDate.slice(0, 10)}</td>
                       <td className="py-2 pr-4">
                         <StatusBadge status={p.status} />
                       </td>
-                      <td className="py-2 pr-4 text-slate-500">{p.createdBy?.name}</td>
+                      <td className="py-2 pr-4 text-muted-foreground">{p.createdBy?.name}</td>
                     </tr>
                   ))}
                 </tbody>

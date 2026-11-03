@@ -91,21 +91,21 @@ export default function PolicyDetailPage() {
     load();
   }
 
-  if (!policy) return <p className="text-slate-500">Loading…</p>;
+  if (!policy) return <p className="text-muted-foreground">Loading…</p>;
 
   return (
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {policy.name} <span className="text-slate-400">v{policy.version}</span>
+          <h1 className="text-2xl font-semibold text-foreground">
+            {policy.name} <span className="text-muted-foreground">v{policy.version}</span>
           </h1>
           <StatusBadge status={policy.status} />
         </div>
-        <p className="mt-1 text-sm text-slate-500 font-mono">{policy.policyKey}</p>
+        <p className="mt-1 text-sm text-muted-foreground font-mono">{policy.policyKey}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border border-slate-200 bg-white p-5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-surface p-5 sm:grid-cols-4">
         <Field label="Entitlement" value={`${policy.entitlementDays} days/yr`} />
         <Field label="Eligible group" value={policy.eligibleGroup} />
         <Field label="Accrual rule" value={policy.accrualRule} />
@@ -119,30 +119,30 @@ export default function PolicyDetailPage() {
         <button
           disabled={busy || !["DRAFT", "SIMULATED"].includes(policy.status)}
           onClick={() => runAction("simulate", { runById: actingUserId })}
-          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-40"
         >
           Run simulation
         </button>
         <button
           disabled={busy || policy.status !== "SIMULATED"}
           onClick={() => runAction("submit", { actorId: actingUserId })}
-          className="rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="rounded-md bg-warning px-4 py-2 text-sm font-medium text-warning-foreground disabled:opacity-40"
         >
           Submit for approval
         </button>
         <button
           disabled={busy || policy.status !== "PENDING_APPROVAL"}
           onClick={() => runAction("publish", { approverId: actingUserId })}
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="rounded-md bg-success px-4 py-2 text-sm font-medium text-success-foreground disabled:opacity-40"
         >
           Publish
         </button>
       </div>
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       {latestResult && (
-        <div className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="mb-3 text-lg font-medium text-slate-900">Latest simulation impact</h2>
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <h2 className="mb-3 text-lg font-medium text-foreground">Latest simulation impact</h2>
           <div className="mb-4 flex gap-6 text-sm">
             <Stat label="Employees affected" value={latestResult.affectedEmployeeCount} />
             <Stat
@@ -153,7 +153,7 @@ export default function PolicyDetailPage() {
           </div>
 
           {latestResult.conflicts.length > 0 && (
-            <div className="mb-4 space-y-1 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            <div className="mb-4 space-y-1 rounded border border-warning bg-warning-soft p-3 text-sm text-warning">
               {latestResult.conflicts.map((c, i) => (
                 <div key={i}>⚠ {c.reason}</div>
               ))}
@@ -162,7 +162,7 @@ export default function PolicyDetailPage() {
 
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th className="py-2 pr-4">Employee</th>
                 <th className="py-2 pr-4">Dept</th>
                 <th className="py-2 pr-4">Before entitlement</th>
@@ -174,14 +174,14 @@ export default function PolicyDetailPage() {
             </thead>
             <tbody>
               {latestResult.perEmployee.map((e) => (
-                <tr key={e.employeeId} className="border-b border-slate-100">
-                  <td className="py-2 pr-4 font-medium text-slate-800">{e.employeeName}</td>
-                  <td className="py-2 pr-4 text-slate-500">{e.department}</td>
+                <tr key={e.employeeId} className="border-b border-border">
+                  <td className="py-2 pr-4 font-medium text-foreground">{e.employeeName}</td>
+                  <td className="py-2 pr-4 text-muted-foreground">{e.department}</td>
                   <td className="py-2 pr-4">{e.before.entitlementDays}</td>
                   <td className="py-2 pr-4">{e.after.entitlementDays}</td>
                   <td className="py-2 pr-4">{e.before.remainingDays}</td>
                   <td className="py-2 pr-4">{e.after.remainingDays}</td>
-                  <td className={`py-2 pr-4 font-medium ${e.deltaRemaining >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  <td className={`py-2 pr-4 font-medium ${e.deltaRemaining >= 0 ? "text-success" : "text-danger"}`}>
                     {e.deltaRemaining >= 0 ? "+" : ""}
                     {e.deltaRemaining}
                   </td>
@@ -192,37 +192,37 @@ export default function PolicyDetailPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 bg-white p-5">
-        <h2 className="mb-3 text-lg font-medium text-slate-900">Simulation history</h2>
+      <div className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-medium text-foreground">Simulation history</h2>
         {simulationRuns.length === 0 ? (
-          <p className="text-sm text-slate-500">No simulations run yet.</p>
+          <p className="text-sm text-muted-foreground">No simulations run yet.</p>
         ) : (
           <ul className="space-y-2 text-sm">
             {simulationRuns.map((s) => (
-              <li key={s.id} className="flex justify-between border-b border-slate-100 pb-2">
+              <li key={s.id} className="flex justify-between border-b border-border pb-2">
                 <span>
                   Run by {s.runBy.name} — {s.affectedEmployeeCount} affected, {s.totalDaysDelta >= 0 ? "+" : ""}
                   {s.totalDaysDelta} days, {s.conflictCount} conflict(s)
                 </span>
-                <span className="text-slate-400">{new Date(s.runAt).toLocaleString()}</span>
+                <span className="text-muted-foreground">{new Date(s.runAt).toLocaleString()}</span>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-5">
-        <h2 className="mb-3 text-lg font-medium text-slate-900">Audit log</h2>
+      <div className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-medium text-foreground">Audit log</h2>
         {auditLogs.length === 0 ? (
-          <p className="text-sm text-slate-500">No audit events yet.</p>
+          <p className="text-sm text-muted-foreground">No audit events yet.</p>
         ) : (
           <ul className="space-y-2 text-sm">
             {auditLogs.map((a) => (
-              <li key={a.id} className="flex justify-between border-b border-slate-100 pb-2">
+              <li key={a.id} className="flex justify-between border-b border-border pb-2">
                 <span>
                   <span className="font-medium">{a.action}</span> by {a.actor.name}
                 </span>
-                <span className="text-slate-400">{new Date(a.timestamp).toLocaleString()}</span>
+                <span className="text-muted-foreground">{new Date(a.timestamp).toLocaleString()}</span>
               </li>
             ))}
           </ul>
@@ -235,8 +235,8 @@ export default function PolicyDetailPage() {
 function Field({ label, value }: { label: string; value?: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-slate-400">{label}</div>
-      <div className="font-medium text-slate-800">{value}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-medium text-foreground">{value}</div>
     </div>
   );
 }
@@ -244,8 +244,8 @@ function Field({ label, value }: { label: string; value?: string }) {
 function Stat({ label, value, warn }: { label: string; value: string | number; warn?: boolean }) {
   return (
     <div>
-      <div className={`text-xl font-semibold ${warn ? "text-amber-600" : "text-slate-900"}`}>{value}</div>
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`text-xl font-semibold ${warn ? "text-warning" : "text-foreground"}`}>{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }

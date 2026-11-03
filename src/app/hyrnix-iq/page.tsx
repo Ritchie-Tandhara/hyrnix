@@ -50,27 +50,27 @@ export default function HyrnixIqPage() {
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">HYRNIX IQ</h1>
-        <p className="mt-1 text-slate-600">
+        <h1 className="text-2xl font-semibold text-foreground">HYRNIX IQ</h1>
+        <p className="mt-1 text-muted-foreground">
           Deterministic, rule-based assistant — pattern-matches your question to a real backend lookup. No external
           AI calls.
         </p>
       </div>
 
-      <div className="mt-4 flex-1 overflow-y-auto rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mt-4 flex-1 overflow-y-auto rounded-lg border border-border bg-surface p-4">
         <div className="space-y-3">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-xl whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
-                  m.role === "user" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-800"
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-surface-muted text-foreground"
                 }`}
               >
                 {m.text}
               </div>
             </div>
           ))}
-          {busy && <div className="text-xs text-slate-400">thinking…</div>}
+          {busy && <div className="text-xs text-muted-foreground">thinking…</div>}
           <div ref={bottomRef} />
         </div>
       </div>
@@ -80,7 +80,7 @@ export default function HyrnixIqPage() {
           <button
             key={s}
             onClick={() => ask(s)}
-            className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+            className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-surface-muted"
           >
             {s}
           </button>
@@ -95,12 +95,12 @@ export default function HyrnixIqPage() {
         className="mt-3 flex gap-2"
       >
         <input
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="flex-1 rounded-md border border-border px-3 py-2 text-sm"
           placeholder="Ask HYRNIX IQ a question…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
-        <button type="submit" className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+        <button type="submit" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
           Send
         </button>
       </form>

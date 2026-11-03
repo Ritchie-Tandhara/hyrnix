@@ -47,8 +47,8 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Overview</h1>
-        <p className="mt-1 max-w-2xl text-slate-600">
+        <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
+        <p className="mt-1 max-w-2xl text-muted-foreground">
           HYRNIX is an AI-native People Operations decision and automation platform. This is the P0 slice:
           leave policy simulation (Policy Lab), decision traceability (Process X-Ray), and a deterministic
           natural-language assistant (HYRNIX IQ) — all backed by the same live data.
@@ -60,22 +60,22 @@ export default async function OverviewPage() {
           <Link
             key={c.label}
             href={c.href}
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow"
+            className="rounded-lg border border-border bg-surface p-4 shadow-sm transition hover:border-border hover:shadow"
           >
-            <div className="text-2xl font-semibold text-slate-900">{c.value}</div>
-            <div className="text-sm text-slate-500">{c.label}</div>
+            <div className="text-2xl font-semibold text-foreground">{c.value}</div>
+            <div className="text-sm text-muted-foreground">{c.label}</div>
           </Link>
         ))}
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-5">
-        <h2 className="mb-3 text-lg font-medium text-slate-900">Recent leave requests</h2>
+      <div className="rounded-lg border border-border bg-surface p-5">
+        <h2 className="mb-3 text-lg font-medium text-foreground">Recent leave requests</h2>
         {stats.recentRequests.length === 0 ? (
-          <p className="text-sm text-slate-500">No leave requests yet.</p>
+          <p className="text-sm text-muted-foreground">No leave requests yet.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th className="py-2 pr-4">Employee</th>
                 <th className="py-2 pr-4">Dates</th>
                 <th className="py-2 pr-4">Days</th>
@@ -85,9 +85,9 @@ export default async function OverviewPage() {
             </thead>
             <tbody>
               {stats.recentRequests.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100">
+                <tr key={r.id} className="border-b border-border">
                   <td className="py-2 pr-4">{r.employee.name}</td>
-                  <td className="py-2 pr-4 text-slate-500">
+                  <td className="py-2 pr-4 text-muted-foreground">
                     {r.startDate.toISOString().slice(0, 10)} → {r.endDate.toISOString().slice(0, 10)}
                   </td>
                   <td className="py-2 pr-4">{r.daysRequested}</td>
@@ -103,7 +103,7 @@ export default async function OverviewPage() {
           </table>
         )}
         <div className="mt-3">
-          <Link href="/process-xray" className="text-sm font-medium text-slate-900 underline">
+          <Link href="/process-xray" className="text-sm font-medium text-foreground underline">
             Open Process X-Ray →
           </Link>
         </div>
