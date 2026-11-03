@@ -32,10 +32,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-screen flex flex-col bg-background text-foreground">
         <ActingUserProvider>
           <NavBar />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+          <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10 sm:px-10 lg:px-12">{children}</main>
         </ActingUserProvider>
       </body>
     </html>

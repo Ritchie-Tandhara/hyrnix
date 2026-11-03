@@ -22,7 +22,7 @@ export default function NavBar() {
 
   return (
     <header className="border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 sm:px-10 lg:px-12">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-lg font-semibold tracking-tight text-primary">
             HYRNIX

@@ -145,7 +145,7 @@ export default function ProcessXrayPage() {
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-2 rounded-lg border border-border bg-surface p-4">
           <h2 className="mb-3 text-sm font-medium text-muted-foreground">Leave requests</h2>
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-border">
             {requests.map((r) => (
               <li key={r.id}>
                 <button

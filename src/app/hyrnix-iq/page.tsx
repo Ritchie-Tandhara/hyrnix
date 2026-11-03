@@ -48,7 +48,7 @@ export default function HyrnixIqPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] flex-col">
+    <div className="flex min-h-[32rem] flex-1 flex-col">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">HYRNIX IQ</h1>
         <p className="mt-1 text-muted-foreground">
