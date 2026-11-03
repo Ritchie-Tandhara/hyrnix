@@ -17,16 +17,20 @@ export type AnalyticsData = {
   headcountByDepartment: { department: string; count: number }[];
   requestsByMonth: { label: string; count: number }[];
   iqIntentBreakdown: { intent: string; count: number }[];
+  leaveDaysUsedByDepartment: { department: string; days: number }[];
+  balanceDistribution: { label: string; count: number }[];
+  simulationHistory: { label: string; totalDaysDelta: number }[];
 };
 
 const MONTH_LABEL = new Intl.DateTimeFormat("en", { month: "short" });
 
 export async function getAnalytics(): Promise<AnalyticsData> {
-  const [employeeRows, leaveRequestRows, policyRows, hyrnixQueries] = await Promise.all([
+  const [employeeRows, leaveRequestRows, policyRows, hyrnixQueries, simulationRunRows] = await Promise.all([
     prisma.employee.findMany(),
     prisma.leaveRequest.findMany(),
     prisma.leavePolicy.findMany(),
     prisma.hyrnixQuery.findMany(),
+    prisma.simulationRun.findMany({ orderBy: { runAt: "asc" }, include: { policy: true }, take: 50 }),
   ]);
 
   const employees = employeeRows.map(toEmployeeLite);
@@ -99,6 +103,39 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     .map(([intent, count]) => ({ intent, count }))
     .sort((a, b) => b.count - a.count);
 
+  // --- Leave days used (approved) by department ---
+  const employeeDeptById = new Map(employees.map((e) => [e.id, e.department]));
+  const deptDays = new Map<string, number>();
+  for (const r of leaveRequests) {
+    if (r.status !== "APPROVED") continue;
+    const dept = employeeDeptById.get(r.employeeId);
+    if (!dept) continue;
+    deptDays.set(dept, (deptDays.get(dept) ?? 0) + r.daysRequested);
+  }
+  const leaveDaysUsedByDepartment = [...deptDays.entries()]
+    .map(([department, days]) => ({ department, days: Math.round(days * 10) / 10 }))
+    .sort((a, b) => b.days - a.days);
+
+  // --- Remaining balance distribution (buckets of 5 days) ---
+  const bucketWidth = 5;
+  const bucketCounts = new Map<number, number>();
+  for (const bal of remainingBalances) {
+    const bucket = Math.max(0, Math.floor(bal / bucketWidth));
+    bucketCounts.set(bucket, (bucketCounts.get(bucket) ?? 0) + 1);
+  }
+  const maxBucket = bucketCounts.size > 0 ? Math.max(...bucketCounts.keys()) : -1;
+  const balanceDistribution = Array.from({ length: maxBucket + 1 }, (_, bucket) => ({
+    label: `${bucket * bucketWidth}-${bucket * bucketWidth + bucketWidth - 1}`,
+    count: bucketCounts.get(bucket) ?? 0,
+  }));
+
+  // --- Simulation impact history (most recent 12 runs) ---
+  const SIM_DATE_LABEL = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+  const simulationHistory = simulationRunRows.slice(-12).map((run) => ({
+    label: SIM_DATE_LABEL.format(run.runAt),
+    totalDaysDelta: Math.round(run.totalDaysDelta * 10) / 10,
+  }));
+
   return {
     kpis: {
       headcount: employees.length,
@@ -113,5 +150,8 @@ export async function getAnalytics(): Promise<AnalyticsData> {
     headcountByDepartment,
     requestsByMonth,
     iqIntentBreakdown,
+    leaveDaysUsedByDepartment,
+    balanceDistribution,
+    simulationHistory,
   };
 }

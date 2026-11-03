@@ -2,6 +2,7 @@ import { getAnalytics } from "@/lib/analytics";
 import { BarChart } from "@/components/charts/BarChart";
 import { StatusBreakdown } from "@/components/charts/StatusBreakdown";
 import { SplitBar } from "@/components/charts/SplitBar";
+import { DivergingBarChart } from "@/components/charts/DivergingBarChart";
 import { Users, CheckCircle2, CalendarRange, Wallet, FileCheck2, Sparkles, type LucideIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -117,6 +118,25 @@ export default async function AnalyticsPage() {
         <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-medium text-foreground">Leave requests by status</h2>
           <StatusBreakdown data={data.requestsByStatus} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-medium text-foreground">Approved leave days by department</h2>
+          <BarChart data={data.leaveDaysUsedByDepartment.map((d) => ({ label: d.department, value: d.days }))} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-medium text-foreground">Remaining balance distribution</h2>
+          <BarChart data={data.balanceDistribution.map((d) => ({ label: d.label, value: d.count }))} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm xl:col-span-2">
+          <h2 className="mb-1 text-lg font-medium text-foreground">Policy Lab simulation impact history</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Total entitlement-day delta of every simulation run, in order — how each proposed policy change
+            would have moved total leave across affected employees.
+          </p>
+          <DivergingBarChart data={data.simulationHistory.map((s) => ({ label: s.label, value: s.totalDaysDelta }))} />
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
