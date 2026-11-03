@@ -96,7 +96,7 @@ export default function ProcessXrayPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={submitRequest} className="grid grid-cols-4 gap-3 rounded-lg border border-border bg-surface p-5">
+        <form onSubmit={submitRequest} className="grid grid-cols-4 gap-3 rounded-xl border border-border bg-surface shadow-sm p-5">
           <label className="text-sm">
             <span className="mb-1 block font-medium text-foreground">Employee</span>
             <select
@@ -143,7 +143,7 @@ export default function ProcessXrayPage() {
       )}
 
       <div className="grid grid-cols-5 gap-6">
-        <div className="col-span-2 rounded-lg border border-border bg-surface p-4">
+        <div className="col-span-2 rounded-xl border border-border bg-surface shadow-sm p-4">
           <h2 className="mb-3 text-sm font-medium text-muted-foreground">Leave requests</h2>
           <ul className="divide-y divide-border">
             {requests.map((r) => (
@@ -168,7 +168,7 @@ export default function ProcessXrayPage() {
           </ul>
         </div>
 
-        <div className="col-span-3 rounded-lg border border-border bg-surface p-5">
+        <div className="col-span-3 rounded-xl border border-border bg-surface shadow-sm p-5">
           {!selected ? (
             <p className="text-sm text-muted-foreground">Select a leave request to see its decision trace.</p>
           ) : (

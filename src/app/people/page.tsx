@@ -22,7 +22,7 @@ export default async function PeoplePage() {
       {departments.map((dept) => {
         const deptEmployees = employees.filter((e) => e.department === dept);
         return (
-          <div key={dept} className="rounded-lg border border-border bg-surface p-5">
+          <div key={dept} className="rounded-xl border border-border bg-surface shadow-sm p-5">
             <h2 className="mb-3 text-lg font-medium text-foreground">
               {dept} <span className="text-sm font-normal text-muted-foreground">({deptEmployees.length})</span>
             </h2>

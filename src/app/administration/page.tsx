@@ -25,7 +25,7 @@ export default async function AdministrationPage() {
         <ComingSoon title="Payroll / Recruitment / Performance" />
       </div>
 
-      <div className="rounded-lg border border-border bg-surface p-5">
+      <div className="rounded-xl border border-border bg-surface shadow-sm p-5">
         <h2 className="mb-3 text-lg font-medium text-foreground">Audit log</h2>
         <table className="w-full text-sm">
           <thead>
@@ -53,7 +53,7 @@ export default async function AdministrationPage() {
         </table>
       </div>
 
-      <div className="rounded-lg border border-border bg-surface p-5">
+      <div className="rounded-xl border border-border bg-surface shadow-sm p-5">
         <h2 className="mb-3 text-lg font-medium text-foreground">HYRNIX IQ query log</h2>
         <table className="w-full text-sm">
           <thead>

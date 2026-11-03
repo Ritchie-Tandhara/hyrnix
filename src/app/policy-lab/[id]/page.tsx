@@ -105,7 +105,7 @@ export default function PolicyDetailPage() {
         <p className="mt-1 text-sm text-muted-foreground font-mono">{policy.policyKey}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-surface p-5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-surface shadow-sm p-5 sm:grid-cols-4">
         <Field label="Entitlement" value={`${policy.entitlementDays} days/yr`} />
         <Field label="Eligible group" value={policy.eligibleGroup} />
         <Field label="Accrual rule" value={policy.accrualRule} />
@@ -141,7 +141,7 @@ export default function PolicyDetailPage() {
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {latestResult && (
-        <div className="rounded-lg border border-border bg-surface p-5">
+        <div className="rounded-xl border border-border bg-surface shadow-sm p-5">
           <h2 className="mb-3 text-lg font-medium text-foreground">Latest simulation impact</h2>
           <div className="mb-4 flex gap-6 text-sm">
             <Stat label="Employees affected" value={latestResult.affectedEmployeeCount} />
@@ -192,7 +192,7 @@ export default function PolicyDetailPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-border bg-surface p-5">
+      <div className="rounded-xl border border-border bg-surface shadow-sm p-5">
         <h2 className="mb-3 text-lg font-medium text-foreground">Simulation history</h2>
         {simulationRuns.length === 0 ? (
           <p className="text-sm text-muted-foreground">No simulations run yet.</p>
@@ -211,7 +211,7 @@ export default function PolicyDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-surface p-5">
+      <div className="rounded-xl border border-border bg-surface shadow-sm p-5">
         <h2 className="mb-3 text-lg font-medium text-foreground">Audit log</h2>
         {auditLogs.length === 0 ? (
           <p className="text-sm text-muted-foreground">No audit events yet.</p>

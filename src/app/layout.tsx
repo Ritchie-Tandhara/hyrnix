@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ActingUserProvider } from "@/components/ActingUserContext";
-import NavBar from "@/components/NavBar";
+import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,10 +33,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-background text-foreground">
+      <body className="h-screen overflow-hidden bg-background text-foreground">
         <ActingUserProvider>
-          <NavBar />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10 sm:px-10 lg:px-12">{children}</main>
+          <div className="flex h-full">
+            <Sidebar />
+            <div className="flex h-full min-w-0 flex-1 flex-col">
+              <Topbar />
+              <main className="flex-1 overflow-y-auto px-5 py-8 sm:px-8 lg:px-10">
+                <div className="mx-auto w-full max-w-6xl">{children}</div>
+              </main>
+            </div>
+          </div>
         </ActingUserProvider>
       </body>
     </html>

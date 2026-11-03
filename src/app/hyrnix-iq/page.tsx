@@ -57,7 +57,7 @@ export default function HyrnixIqPage() {
         </p>
       </div>
 
-      <div className="mt-4 flex-1 overflow-y-auto rounded-lg border border-border bg-surface p-4">
+      <div className="mt-4 flex-1 overflow-y-auto rounded-xl border border-border bg-surface shadow-sm p-4">
         <div className="space-y-3">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>

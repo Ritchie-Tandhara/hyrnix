@@ -93,7 +93,7 @@ export default function PolicyLabPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={createDraft} className="space-y-4 rounded-lg border border-border bg-surface p-5">
+        <form onSubmit={createDraft} className="space-y-4 rounded-xl border border-border bg-surface shadow-sm p-5">
           <div className="grid grid-cols-2 gap-4">
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-foreground">Policy key (group)</span>
@@ -209,7 +209,7 @@ export default function PolicyLabPage() {
       ) : (
         <div className="space-y-6">
           {grouped.map((g) => (
-            <div key={g.key} className="rounded-lg border border-border bg-surface p-5">
+            <div key={g.key} className="rounded-xl border border-border bg-surface shadow-sm p-5">
               <h2 className="mb-3 font-mono text-sm text-muted-foreground">{g.key}</h2>
               <table className="w-full text-sm">
                 <thead>
